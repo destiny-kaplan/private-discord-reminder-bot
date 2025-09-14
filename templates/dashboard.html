@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Event Manager</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/main.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
+<script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
+<style>
+    .task-item, .event-item {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .task-item:hover, .event-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .item-title {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .item-actions {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-small {
+        padding: 4px 8px;
+        font-size: 0.8em;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-complete {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-complete:hover {
+        background-color: #218838;
+    }
+    
+    .priority-high { color: #dc3545; font-weight: bold; }
+    .priority-medium { color: #ffc107; font-weight: bold; }
+    .priority-low { color: #28a745; font-weight: bold; }
+    
+    .due-date {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .overdue {
+        color: #dc3545 !important;
+        font-weight: bold;
+    }
+    
+    .due-soon {
+        color: #ffc107 !important;
+        font-weight: bold;
+    }
+    
+    .normal {
+        color: #666;
+    }
+    
+    .no-date {
+        color: #999;
+        font-style: italic;
+    }
+    
+    .category-badge {
+        background-color: #007bff;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 0.75em;
+    }
+    
+    .no-items {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 20px;
+    }
+</style>
+</head>
+<body>
+<header>
+    <h1>Tasks & Events Dashboard</h1>
+    <div class="menu-bar">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/add_item/event">Event Form</a>
+        <a href="/add_item/task">Task Form</a>
+        <a href="/calendar">Calendar Dashboard</a>
+        <a href="/analytics">View Analytics</a>
+        <a href="/logout">Log Out</a>
+    </div>
+</header>
+
+<div class="container main-content">
+    <!-- Tasks Section -->
+    <div class="tasks">
+        <h2>📋 Pending Tasks</h2>
+        {% set pending_tasks = items | selectattr("type", "equalto", "task") | selectattr("status", "equalto", "pending") | list %}
+        {% if pending_tasks %}
+            {% for task in pending_tasks %}
+                <div class="task-item">
+                    <div class="item-header">
+                        <div class="item-title">{{ task.name }}</div>
+                        <div class="item-actions">
+                            <a href="/complete/{{ task.id }}" class="btn-small btn-complete">✓ Complete</a>
+                        </div>
+                    </div>
+                    <div class="due-date" data-due-date="{{ task.due_date }}">
+                        {% if task.due_date %}
+                            Due: {{ task.due_date | format_datetime }}
+                        {% endif %}
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <span class="priority-{{ task.priority.lower() }}">{{ task.priority }} Priority</span>
+                        <span class="category-badge">{{ task.category }}</span>
+                    </div>
+                    {% if task.notes %}
+                        <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                            {{ task.notes }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-items">No pending tasks! 🎉</div>
+        {% endif %}
+    </div>
+
+    <!-- Events Mini Calendar -->
+    <div class="calendar">
+        <h2>📅 Events Calendar</h2>
+        <div id="dashboard-calendar" style="width:100%; height:400px;"></div>
+        
+        <!-- Recent Events List -->
+        <div style="margin-top: 20px;">
+            <h3>Upcoming Events</h3>
+            {% set upcoming_events = items | selectattr("type", "equalto", "event") | selectattr("status", "equalto", "pending") | list %}
+            {% if upcoming_events %}
+                {% for event in upcoming_events[:5] %}
+                    <div class="event-item">
+                        <div class="item-header">
+                            <div class="item-title">{{ event.name }}</div>
+                            <div class="item-actions">
+                                <a href="/complete/{{ event.id }}" class="btn-small btn-complete">✓ Complete</a>
+                            </div>
+                        </div>
+                        <div class="due-date" data-due-date="{{ event.due_date }}">
+                            {% if event.due_date %}
+                                Due: {{ event.due_date | format_datetime }}
+                            {% endif %}
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <span class="priority-{{ event.priority.lower() }}">{{ event.priority }} Priority</span>
+                            <span class="category-badge">{{ event.category }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+                {% if upcoming_events | length > 5 %}
+                    <p style="text-align: center; margin-top: 10px;">
+                        <a href="/calendar">View all {{ upcoming_events | length }} events →</a>
+                    </p>
+                {% endif %}
+            {% else %}
+                <div class="no-items">No upcoming events</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('dashboard-calendar');
+    if(calendarEl){
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,listWeek'
+            },
+            height: 400,
+            eventSources: [{
+                url: '/api/events',
+                method: 'GET',
+                failure: function() {
+                    console.error('Error fetching events for dashboard calendar');
+                }
+            }],
+            eventClick: function(info) {
+                // Redirect to calendar page for detailed event interaction
+                window.location.href = '/calendar';
+            },
+            eventMouseEnter: function(info) {
+                // Show tooltip with event details
+                const props = info.event.extendedProps;
+                const recurringText = props && props.is_recurring_instance ? ' (Recurring)' : '';
+                const priority = props ? props.priority : 'Medium';
+                const category = props ? props.category : 'Misc';
+                info.el.title = `${info.event.title}${recurringText}\nPriority: ${priority}\nCategory: ${category}`;
+            }
+        });
+        calendar.render();
+    }
+
+    // Fixed function to update due dates without duplication
+    function updateDueDates() {
+        const now = new Date();
+        const dueDateElements = document.querySelectorAll('.due-date[data-due-date]');
+        
+        dueDateElements.forEach(el => {
+            const dueDateStr = el.getAttribute('data-due-date');
+            if (!dueDateStr || dueDateStr === 'None') return;
+            
+            try {
+                const dueDate = new Date(dueDateStr);
+                if (isNaN(dueDate.getTime())) return;
+                
+                const timeDiff = dueDate - now;
+                const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                
+                // Format the date in 12-hour format
+                const formattedDate = dueDate.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                
+                // Remove existing classes and set new content
+                el.classList.remove('overdue', 'due-soon', 'normal');
+                
+                if (timeDiff < 0) {
+                    el.classList.add('overdue');
+                    el.innerHTML = `⚠️ OVERDUE: ${formattedDate}`;
+                } else if (daysDiff <= 1) {
+                    el.classList.add('due-soon');
+                    el.innerHTML = `⏰ DUE SOON: ${formattedDate}`;
+                } else {
+                    el.classList.add('normal');
+                    el.innerHTML = `Due: ${formattedDate}`;
+                }
+            } catch (error) {
+                console.error('Error processing due date:', dueDateStr, error);
+                el.innerHTML = `Due: ${dueDateStr}`;
+            }
+        });
+    }
+    
+    // Update due dates on load and every minute
+    updateDueDates();
+    setInterval(updateDueDates, 60000);
+});
+</script>
+</body>
+</html>

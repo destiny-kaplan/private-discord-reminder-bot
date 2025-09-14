@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add {{ item_type.title() }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
+    <style>
+        .container {
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        form label {
+            display: block;
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.3rem;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        form input[type="submit"] {
+            margin-top: 1.5rem;
+            background-color: #3399ff;
+            color: #fff;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+        form input[type="submit"]:hover {
+            background-color: #2673cc;
+        }
+        .hint {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        .warning {
+            font-size: 0.85em;
+            color: #d63384;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 style="text-align:center;">Tasks & Events Dashboard</h1>
+        <div class="menu-bar" style="text-align:center; margin-bottom:1rem;">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/add_item/event">Event Form</a>
+            <a href="/add_item/task">Task Form</a>
+            <a href="/calendar">Calendar Dashboard</a>
+            <a href="/analytics">View Analytics</a>
+            <a href="/logout">Log Out</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2 style="text-align:center;">Add {{ item_type.title() }}</h2>
+        <form method="POST">
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" required>
+
+            <label for="due_date">Due Date & Time</label>
+            <input type="datetime-local" name="due_date" id="due_date" required>
+
+            <label for="mention">Mention (optional)</label>
+            <input type="text" name="mention" id="mention" placeholder="@username or leave empty">
+            <div class="hint">Enter specific Discord @username mentions. Leave empty for no mentions.</div>
+            <div class="warning">Note: @everyone is not allowed here and will be ignored.</div>
+
+            <label for="repeat_interval">Repeat Interval</label>
+            <select name="repeat_interval" id="repeat_interval">
+                <option value="none">None</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+            </select>
+
+            <label for="category">Category</label>
+            <select name="category" id="category">
+                <option value="home">Home</option>
+                <option value="vehicle">Vehicle</option>
+                <option value="bills">Bills</option>
+                <option value="school">School</option>
+                <option value="work">Work</option>
+                <option value="misc">Misc</option>
+            </select>
+
+            <label for="notes">Notes</label>
+            <textarea name="notes" id="notes" rows="4"></textarea>
+
+            <label for="priority">Priority</label>
+            <select name="priority" id="priority">
+                <option>Low</option>
+                <option selected>Medium</option>
+                <option>High</option>
+            </select>
+
+            <label for="color">{{ item_type.title() }} Color</label>
+            <input type="color" name="color" id="color" value="{% if item_type == 'event' %}#3399ff{% else %}#28a745{% endif %}">
+            <div class="hint">Choose a color for this {{ item_type }} in the calendar view.</div>
+
+            <input type="submit" value="Add {{ item_type.title() }}">
+        </form>
+    </div>
+
+    <script>
+        // Validate mention field on form submit
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const mentionField = document.getElementById('mention');
+            const mention = mentionField.value.trim().toLowerCase();
+            
+            // Clear @everyone if someone tries to use it
+            if (mention === '@everyone' || mention === 'everyone') {
+                mentionField.value = '';
+                alert('Note: @everyone mentions are not allowed in this field. The field has been cleared.');
+            }
+        });
+
+        // Set default colors based on item type
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorInput = document.getElementById('color');
+            const itemType = '{{ item_type }}';
+            
+            if (itemType === 'task' && colorInput.value === '#3399ff') {
+                colorInput.value = '#28a745'; // Green for tasks
+            }
+        });
+    </script>
+</body>
+</html>
